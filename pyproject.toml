@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "researchnet"
+version = "0.1.0"
+description = "A portfolio-ready multi-agent research network MVP"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Codex" }]
+
+[project.scripts]
+researchnet = "researchnet.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
