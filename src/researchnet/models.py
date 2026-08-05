@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass(slots=True)
@@ -15,6 +15,14 @@ class ResearchRequest:
 class ResearchTask:
     title: str
     rationale: str
+
+
+@dataclass(slots=True)
+class TraceEvent:
+    agent: str
+    action: str
+    message: str
+    details: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -38,6 +46,7 @@ class Finding:
 class VerificationNote:
     status: str
     note: str
+    confidence_score: float = 0.0
 
 
 @dataclass(slots=True)
@@ -48,3 +57,15 @@ class ResearchState:
     findings: List[Finding] = field(default_factory=list)
     verification: Optional[VerificationNote] = None
     report: str = ""
+    confidence_score: Optional[float] = None
+    traces: List[TraceEvent] = field(default_factory=list)
+
+    def log_trace(self, agent: str, action: str, message: str, **details: Any) -> None:
+        self.traces.append(
+            TraceEvent(
+                agent=agent,
+                action=action,
+                message=message,
+                details={key: value for key, value in details.items() if value is not None},
+            )
+        )

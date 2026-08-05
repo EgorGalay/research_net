@@ -14,7 +14,8 @@ from .source_store import SourceStore
 
 
 class PlannerAgent:
-    def run(self, request: ResearchRequest) -> List[ResearchTask]:
+    def run(self, state: ResearchState) -> List[ResearchTask]:
+        request = state.request
         topic = request.topic.strip()
         tasks = [
             ResearchTask(
@@ -39,6 +40,7 @@ class PlannerAgent:
             )
         elif request.depth == "quick":
             tasks = tasks[:2]
+        state.log_trace("planner", "planned_tasks", "Created the research plan.", task_count=len(tasks), depth=request.depth)
         return tasks
 
 
@@ -48,6 +50,7 @@ class SearcherAgent:
 
     def run(self, state: ResearchState) -> List[Finding]:
         terms = self._extract_terms(state)
+        state.log_trace("searcher", "search_started", "Searching the local source store.", terms=terms)
         sources = self.store.search(terms, limit=4)
         findings = []
         for source in sources:
@@ -60,6 +63,14 @@ class SearcherAgent:
                 )
             )
         state.sources = sources
+        state.log_trace(
+            "searcher",
+            "search_completed",
+            "Collected source candidates and extracted findings.",
+            source_count=len(sources),
+            finding_count=len(findings),
+            source_ids=[source.source_id for source in sources],
+        )
         return findings
 
     def _extract_terms(self, state: ResearchState) -> List[str]:
@@ -77,11 +88,18 @@ class SearcherAgent:
 class VerifierAgent:
     def run(self, state: ResearchState) -> VerificationNote:
         if not state.findings:
-            return VerificationNote(status="weak", note="No evidence was collected, so the result is too thin.")
+            state.confidence_score = 0.0
+            state.log_trace(
+                "verifier",
+                "verification_failed",
+                "No evidence was collected, so confidence is zero.",
+            )
+            return VerificationNote(status="weak", note="No evidence was collected, so the result is too thin.", confidence_score=0.0)
 
         avg_relevance = sum(f.relevance for f in state.findings) / len(state.findings)
         avg_credibility = sum(s.credibility for s in state.sources) / len(state.sources)
         confidence = round((avg_relevance * 0.6) + (avg_credibility * 0.4), 2)
+        state.confidence_score = confidence
 
         if confidence >= 0.75:
             note = "Evidence quality looks solid and the result is defensible."
@@ -93,12 +111,22 @@ class VerifierAgent:
             note = "The evidence base is weak. The topic needs better sources before a strong conclusion."
             status = "weak"
 
-        return VerificationNote(status=status, note=f"{note} Confidence score: {confidence}.")
+        state.log_trace(
+            "verifier",
+            "verification_completed",
+            "Scored the evidence base and assigned a confidence value.",
+            confidence_score=confidence,
+            status=status,
+            average_relevance=round(avg_relevance, 2),
+            average_credibility=round(avg_credibility, 2),
+        )
+        return VerificationNote(status=status, note=f"{note} Confidence score: {confidence}.", confidence_score=confidence)
 
 
 class SynthesizerAgent:
     def run(self, state: ResearchState) -> str:
         lines = []
+        state.log_trace("synthesizer", "report_started", "Assembling the markdown report.", task_count=len(state.tasks))
         lines.append(f"# Research Brief: {state.request.topic}")
         lines.append("")
         lines.append(f"Audience: {state.request.audience}")
@@ -126,7 +154,9 @@ class SynthesizerAgent:
         lines.append(
             "- This project demonstrates multi-agent orchestration, shared state, deterministic reasoning steps, and a clear path to real tool integration."
         )
-        return "\n".join(lines)
+        report = "\n".join(lines)
+        state.log_trace("synthesizer", "report_completed", "Markdown report assembled.", line_count=len(lines), character_count=len(report))
+        return report
 
     def _match_findings_to_sources(self, state: ResearchState):
         source_by_id = {source.source_id: source for source in state.sources}
@@ -140,4 +170,7 @@ class QualityAgent:
     def run(self, state: ResearchState) -> ResearchState:
         if state.verification and state.verification.status == "weak":
             state.report += "\n\n> Note: The workflow flagged weak evidence. Add more sources before using this as a final answer."
+            state.log_trace("quality", "quality_warning", "Added a weak-evidence warning to the report.")
+        else:
+            state.log_trace("quality", "quality_passed", "Report passed the final quality gate.")
         return state

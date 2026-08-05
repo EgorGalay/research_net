@@ -19,11 +19,13 @@ class ResearchNet:
 
     def run(self, request: ResearchRequest) -> ResearchState:
         state = ResearchState(request=request)
-        state.tasks = self.planner.run(request)
+        state.log_trace("workflow", "run_started", "Research workflow started.", topic=request.topic, depth=request.depth)
+        state.tasks = self.planner.run(state)
         state.findings = self.searcher.run(state)
         state.verification = self.verifier.run(state)
         state.report = self.synthesizer.run(state)
         state = self.quality.run(state)
+        state.log_trace("workflow", "run_completed", "Research workflow completed.", confidence_score=state.confidence_score)
         return state
 
     def run_topic(self, topic: str, audience: str = "portfolio reviewers", depth: str = "standard") -> Dict[str, Any]:
@@ -35,5 +37,7 @@ class ResearchNet:
             "sources": [asdict(source) for source in state.sources],
             "findings": [asdict(finding) for finding in state.findings],
             "verification": asdict(state.verification) if state.verification else None,
+            "confidence_score": state.confidence_score,
+            "traces": [asdict(trace) for trace in state.traces],
             "report": state.report,
         }
