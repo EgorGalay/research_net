@@ -1,13 +1,14 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from datetime import datetime, timezone
 from time import perf_counter
+from pathlib import Path
 from typing import Any, Dict
 from uuid import uuid4
 
 from .agents import PlannerAgent, QualityAgent, SearcherAgent, SynthesizerAgent, VerifierAgent
-from .models import ResearchRequest, ResearchState
+from .models import ResearchRequest, ResearchState, RunDetail
+from .run_store import RunStore
 from .source_store import SourceStore
 
 
@@ -16,13 +17,14 @@ def _utc_now() -> str:
 
 
 class ResearchNet:
-    def __init__(self, store: SourceStore | None = None) -> None:
+    def __init__(self, store: SourceStore | None = None, run_store: RunStore | None = None, db_path: str | Path | None = None) -> None:
         self.store = store or SourceStore()
         self.planner = PlannerAgent()
         self.searcher = SearcherAgent(self.store)
         self.verifier = VerifierAgent()
         self.synthesizer = SynthesizerAgent()
         self.quality = QualityAgent()
+        self.run_store = run_store or RunStore(db_path)
 
     def run(self, request: ResearchRequest) -> ResearchState:
         state = ResearchState(request=request, run_id=uuid4().hex, started_at=_utc_now())
@@ -75,6 +77,7 @@ class ResearchNet:
             duration_ms=state.duration_ms,
             confidence_score=state.confidence_score,
         )
+        self.run_store.save(state)
         return state
 
     def _run_stage(self, state: ResearchState, stage: str, start_message: str, end_message: str, action: Any):
@@ -88,17 +91,4 @@ class ResearchNet:
     def run_topic(self, topic: str, audience: str = "portfolio reviewers", depth: str = "standard") -> Dict[str, Any]:
         request = ResearchRequest(topic=topic, audience=audience, depth=depth)
         state = self.run(request)
-        return {
-            "run_id": state.run_id,
-            "started_at": state.started_at,
-            "finished_at": state.finished_at,
-            "duration_ms": state.duration_ms,
-            "request": asdict(state.request),
-            "tasks": [asdict(task) for task in state.tasks],
-            "sources": [asdict(source) for source in state.sources],
-            "findings": [asdict(finding) for finding in state.findings],
-            "verification": asdict(state.verification) if state.verification else None,
-            "confidence_score": state.confidence_score,
-            "traces": [asdict(trace) for trace in state.traces],
-            "report": state.report,
-        }
+        return RunDetail.from_state(state).to_dict()

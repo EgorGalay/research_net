@@ -12,6 +12,8 @@ It demonstrates a simple but realistic agent pipeline:
 
 The current implementation runs end-to-end with local sample sources so it is easy to demo, extend, and test without API keys.
 
+Every research run is also persisted to a local SQLite database at `work/researchnet.sqlite3`, so you can inspect previous runs through the API.
+
 ## Quick Start
 
 ```bash
@@ -50,6 +52,22 @@ researchnet serve
 
 The `serve` command does not require `--topic`.
 
+## Persistence
+
+ResearchNet stores each run in SQLite with:
+
+- `run_id`
+- `started_at`
+- `finished_at`
+- `duration_ms`
+- the original request
+- the report
+- the confidence score
+- traces
+- sources
+
+This keeps the project demo-friendly while making it feel closer to a small production service.
+
 ## What This Project Shows
 
 - multi-agent orchestration
@@ -83,3 +101,15 @@ Example payload:
   "depth": "standard"
 }
 ```
+
+`GET /runs`
+
+Returns a list of saved runs, newest first.
+
+`GET /runs/latest`
+
+Returns the most recent saved run.
+
+`GET /runs/{run_id}`
+
+Returns the full saved run for a specific `run_id`.
