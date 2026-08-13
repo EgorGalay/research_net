@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "researchnet"
-version = "0.2.0"
+version = "0.3.0"
 description = "A portfolio-ready multi-agent research network MVP"
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{ name = "Codex" }]
+authors = [{ name = "ResearchNet" }]
 dependencies = [
     "fastapi>=0.115,<1",
     "uvicorn>=0.30,<1",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
@@ -19,9 +20,12 @@ class ResearchTask:
 
 @dataclass(slots=True)
 class TraceEvent:
+    timestamp: str
+    stage: str
     agent: str
     action: str
     message: str
+    duration_ms: Optional[int] = None
     details: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -52,6 +56,10 @@ class VerificationNote:
 @dataclass(slots=True)
 class ResearchState:
     request: ResearchRequest
+    run_id: str = ""
+    started_at: str = ""
+    finished_at: str = ""
+    duration_ms: int = 0
     tasks: List[ResearchTask] = field(default_factory=list)
     sources: List[SourceDocument] = field(default_factory=list)
     findings: List[Finding] = field(default_factory=list)
@@ -60,12 +68,24 @@ class ResearchState:
     confidence_score: Optional[float] = None
     traces: List[TraceEvent] = field(default_factory=list)
 
-    def log_trace(self, agent: str, action: str, message: str, **details: Any) -> None:
+    def log_trace(
+        self,
+        agent: str,
+        action: str,
+        message: str,
+        *,
+        stage: Optional[str] = None,
+        duration_ms: Optional[int] = None,
+        **details: Any,
+    ) -> None:
         self.traces.append(
             TraceEvent(
+                timestamp=datetime.now(timezone.utc).isoformat(timespec="milliseconds"),
+                stage=stage or agent,
                 agent=agent,
                 action=action,
                 message=message,
+                duration_ms=duration_ms,
                 details={key: value for key, value in details.items() if value is not None},
             )
         )

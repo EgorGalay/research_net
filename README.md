@@ -15,33 +15,40 @@ The current implementation runs end-to-end with local sample sources so it is ea
 ## Quick Start
 
 ```bash
-python -m researchnet --topic "AI agents for customer support"
+researchnet research --topic "AI agents for customer support"
 ```
 
-Or install locally:
+Legacy shortcut still works:
 
 ```bash
-pip install -e .
 researchnet --topic "AI agents for customer support"
 ```
 
 Print the full structured result as JSON:
 
 ```bash
-researchnet --topic "AI agents for customer support" --json
+researchnet research --topic "AI agents for customer support" --json
 ```
 
 Export the JSON payload to disk:
 
 ```bash
-researchnet --topic "AI agents for customer support" --export-json outputs/run.json
+researchnet research --topic "AI agents for customer support" --export-json outputs/run.json
+```
+
+Export directly with the dedicated subcommand:
+
+```bash
+researchnet export --topic "AI agents for customer support" --output outputs/run.json
 ```
 
 Run the FastAPI service:
 
 ```bash
-researchnet --serve
+researchnet serve
 ```
+
+The `serve` command does not require `--topic`.
 
 ## What This Project Shows
 
@@ -51,11 +58,19 @@ researchnet --serve
 - deterministic workflow steps
 - structured outputs
 - confidence scoring for the verification step
-- a CLI that can emit markdown or JSON
+- a CLI with `research`, `export`, and `serve` subcommands
 - a REST API for remote execution
 - a clean path to add LLMs, web search, vector search, and persistence later
 
 ## API
+
+`GET /`
+
+Returns a small welcome payload with links to the main endpoints.
+
+`GET /health`
+
+Returns a simple status check for orchestration or deployment probes.
 
 `POST /research`
 
@@ -68,7 +83,3 @@ Example payload:
   "depth": "standard"
 }
 ```
-
-`GET /health`
-
-Returns a simple status check for orchestration or deployment probes.

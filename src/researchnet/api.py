@@ -20,7 +20,20 @@ class ResearchRequestPayload(BaseModel):
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="ResearchNet API", version="0.2.0")
+    app = FastAPI(title="ResearchNet API", version="0.3.0")
+
+    @app.get("/")
+    def index() -> dict[str, object]:
+        return {
+            "name": "ResearchNet API",
+            "status": "ready",
+            "version": "0.3.0",
+            "docs_url": "/docs",
+            "endpoints": {
+                "health": "/health",
+                "research": "POST /research",
+            },
+        }
 
     @app.get("/health")
     def health() -> dict[str, str]:
